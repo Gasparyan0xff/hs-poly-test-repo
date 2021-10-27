@@ -1,6 +1,5 @@
 module Part3.Tasks where
 
-import Data.List
 import Util (notImplementedYet)
 
 -- Функция finc принимает на вход функцию f и число n и возвращает список чисел [f(n), f(n + 1), ...]
@@ -41,5 +40,5 @@ uniq lst = let elem = head lst in
 -- приводящих к этому результату. Результат следует представить в виде списка пар.
 grokBy :: (Eq k) => (a -> k) -> [a] -> [(k, [a])]
 grokBy f l = let k = map (f) l
-                 unique_list = nub k in
+                 unique_list = uniq k in
              map (\k -> (k, filter (\v -> f(v) == k) l)) unique_list

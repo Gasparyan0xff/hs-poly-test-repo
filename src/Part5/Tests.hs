@@ -42,6 +42,11 @@ unit_myConcat = do
 prop_myConcat :: [[Int]] -> Bool
 prop_myConcat lst = myConcat lst == concat lst
 
+unit_myConcatMap = do
+    [1,1,2,3,1,2,3,4,5] @?= myConcatMap (enumFromTo 1) [1, 3, 5]
+    [(1.0,3.0,0.5),(3.0,5.0,1.5),(5.0,7.0,2.5)]  @?= myConcatMap (\x -> [(x, x+2, x/2)]) [1, 3, 5]
+    "" @?= myConcatMap (\x -> x) []
+
 unit_myFilter = do
     myFilter (`elem` "123456789") "" @?= ""
     myFilter (`elem` "123456789") "a1v234asas5" @?= "12345"
