@@ -17,7 +17,7 @@ import Control.Applicative
 import Control.Arrow (first)
 import Control.Monad.IO.Class (liftIO)
 import Data.List (intercalate, isInfixOf)
-import Data.String(fromString)
+import Data.String(fromString, IsString(..))
 import Data.Maybe (fromMaybe)
 import Data.Monoid (Monoid(..), Endo(..), Sum(..))
 import Data.Proxy (Proxy(..))
@@ -37,8 +37,6 @@ import qualified Test.Tasty.Providers as Tasty
 import qualified Test.Tasty.Options as Tasty
 import qualified Test.Tasty.Runners as Tasty
 import qualified Test.Tasty.Ingredients.ConsoleReporter as Tasty
-import qualified Rainbow
-import Rainbow (chunk)
 
 import qualified Data.Aeson as J
 import Data.Aeson((.:), (.=))
@@ -46,6 +44,17 @@ import Data.Aeson((.:), (.=))
 import Util(NotImplementedYet(..))
 import Test.Tasty.Ingredients (composeReporters)
 
+import qualified System.Console.Pretty as Pretty
+
+data Chunk = Chunk { contents :: String, fgColor :: Pretty.Color, bgColor :: Pretty.Color, style :: Pretty.Style }
+chunk :: String -> Chunk
+chunk s = Chunk s Pretty.Default Pretty.Default Pretty.Normal
+
+instance IsString Chunk where
+  fromString = chunk
+
+codify (Chunk c fg bg s) =
+  c & (Pretty.color fg) & (Pretty.bgColor bg) & (Pretty.style s)
 
 data KotoedRunnerStatus =  ABORTED | SUCCESSFUL | NOT_IMPLEMENTED | FAILED
     deriving (Show, Eq, Bounded, Enum, Generic)
@@ -68,15 +77,15 @@ newtype KotoedRunnerTestRun = KotoedRunnerTestRun {
 } deriving (Show, Eq, Semigroup, Monoid)
 
 class Chunky a where
-    toChunks :: a -> [Rainbow.Chunk]
-    listToChunks :: [a] -> [Rainbow.Chunk]
+    toChunks :: a -> [Chunk]
+    listToChunks :: [a] -> [Chunk]
     listToChunks s = concatMap toChunks s
 
 instance Chunky Char where
     toChunks c = listToChunks [c]
     listToChunks s = [fromString s]
 
-instance Chunky Rainbow.Chunk where
+instance Chunky Chunk where
     toChunks s = [s]
     listToChunks s = s
 
@@ -85,19 +94,19 @@ instance (Chunky a) => Chunky [a] where
 
 mix c1 c2 = toChunks c1 ++ toChunks c2
 
-simpleChunk :: (Show a) => a -> [Rainbow.Chunk]
+simpleChunk :: (Show a) => a -> [Chunk]
 simpleChunk s = toChunks $ show s
 
 printR :: (Chunky a) => a -> IO ()
-printR = Rainbow.putChunksLn . toChunks
+printR x = putStrLn $ concat (codify <$> toChunks x)
 
 newLine = chunk "\n"
 
 instance Chunky KotoedRunnerStatus where
     toChunks s =
-      let color SUCCESSFUL = Rainbow.fore (Rainbow.green <> Rainbow.brightGreen) . Rainbow.bold
-          color NOT_IMPLEMENTED = Rainbow.fore Rainbow.grey
-          color _ = Rainbow.fore Rainbow.red . Rainbow.bold
+      let color SUCCESSFUL c = c { fgColor = Pretty.Green }
+          color NOT_IMPLEMENTED c = c { style = Pretty.Faint }
+          color _ c = c { fgColor = Pretty.Red, style = Pretty.Bold }
           rep = show s in
       color s <$> toChunks rep
 
@@ -109,7 +118,7 @@ instance Chunky KotoedRunnerTestFailure where
                  (Just ex,         _)      -> toChunks ex
                  (_      ,         Just e) -> toChunks e
                  _                         -> []
-      in Rainbow.fore Rainbow.red <$> combined
+      in (\c -> c { fgColor = Pretty.Red }) <$> combined
 instance Chunky KotoedRunnerTestResult where
     toChunks (KotoedRunnerTestResult status failure) = status `mix` failureTail failure
       where failureTail (Just e) = newLine `mix` e

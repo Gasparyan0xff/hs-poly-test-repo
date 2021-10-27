@@ -39,5 +39,5 @@ test-suite sample-tests
     containers,
     directory,
     filepath,
-    rainbow
+    pretty-terminal
   default-language:  Haskell2010
