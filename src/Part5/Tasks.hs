@@ -30,5 +30,4 @@ myFilter :: (a -> Bool) -> [a] -> [a]
 myFilter p = myFoldr (\l lst -> if (p l) then l:lst else lst) []
 
 myPartition :: (a -> Bool) -> [a] -> ([a], [a])
-myPartition p = myFoldr (\l (s,t) -> if (p l) then (l:s, t) else (s, l:t)) ([], [])
-
+myPartition p lst = (myFilter p lst, myFilter (not . p) lst)
